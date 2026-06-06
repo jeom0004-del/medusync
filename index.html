@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEDUSYNC — 2026.7.11–12</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap');
+
+  :root {
+    --bg: #060a09;
+    --bg2: #0b1512;
+    --bg3: #0f1d1a;
+    --cyan: #00ecd4;
+    --cyan-dim: #00a893;
+    --cyan-dark: #003d35;
+    --white: #e8f0ee;
+    --gray: #4a5c58;
+    --gray-light: #8a9e99;
+    --border: #1a3530;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ── Scanline overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,236,212,0.015) 2px,
+      rgba(0,236,212,0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* ── Header ── */
+  header {
+    border-bottom: 0.5px solid var(--border);
+    padding: 28px 20px 20px;
+    position: relative;
+  }
+  .header-tag {
+    font-size: 9px;
+    color: var(--cyan-dim);
+    letter-spacing: 0.15em;
+    margin-bottom: 6px;
+  }
+  .header-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 52px;
+    letter-spacing: 0.06em;
+    line-height: 0.95;
+    color: #fff;
+  }
+  .header-sub {
+    font-size: 10px;
+    color: var(--cyan);
+    letter-spacing: 0.12em;
+    margin-top: 10px;
+  }
+  .header-date {
+    font-size: 11px;
+    color: var(--gray-light);
+    margin-top: 4px;
+  }
+  .header-corner {
+    position: absolute;
+    top: 16px; right: 20px;
+    font-size: 9px;
+    color: var(--gray);
+    text-align: right;
+    line-height: 1.8;
+  }
+
+  /* ── Nav tabs ── */
+  .nav {
+    display: flex;
+    border-bottom: 0.5px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-btn {
+    flex-shrink: 0;
+    padding: 12px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--gray);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .nav-btn:hover { color: var(--white); }
+  .nav-btn.active {
+    color: var(--cyan);
+    border-bottom-color: var(--cyan);
+  }
+
+  /* ── Section ── */
+  .section { display: none; padding: 20px; }
+  .section.active { display: block; }
+
+  /* ── Section heading ── */
+  .sec-label {
+    font-size: 8px;
+    color: var(--cyan-dim);
+    letter-spacing: 0.2em;
+    margin-bottom: 4px;
+  }
+  .sec-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    color: #fff;
+    margin-bottom: 18px;
+    line-height: 1.1;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    height: 0.5px;
+    background: var(--border);
+    margin: 18px 0;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .card-label {
+    font-size: 8px;
+    color: var(--cyan-dim);
+    letter-spacing: 0.15em;
+    margin-bottom: 6px;
+  }
+
+  /* ── Ticket ── */
+  .ticket-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8px 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .ticket-row:last-child { border-bottom: none; }
+  .ticket-name { font-size: 12px; color: var(--white); }
+  .ticket-note { font-size: 9px; color: var(--gray-light); margin-top: 2px; }
+  .ticket-price { font-size: 16px; color: var(--cyan); font-weight: 700; }
+  .ticket-highlight { background: var(--cyan-dark); border-color: var(--cyan-dim); }
+  .ticket-highlight .ticket-name { color: var(--cyan); }
+
+  .badge {
+    display: inline-block;
+    font-size: 8px;
+    color: #000;
+    background: var(--cyan);
+    padding: 2px 6px;
+    border-radius: 2px;
+    margin-left: 6px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    vertical-align: middle;
+  }
+
+  /* ── Method block ── */
+  .method-block {
+    background: var(--bg3);
+    border-left: 2px solid var(--cyan-dim);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    border-radius: 0 4px 4px 0;
+  }
+  .method-head {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .method-body {
+    font-size: 11px;
+    color: var(--gray-light);
+    line-height: 1.8;
+  }
+  .method-body strong { color: var(--white); font-weight: 400; }
+
+  .link-btn {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 7px 14px;
+    border: 0.5px solid var(--cyan-dim);
+    color: var(--cyan);
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    border-radius: 2px;
+    transition: background 0.15s;
+  }
+  .link-btn:hover { background: var(--cyan-dark); }
+  .link-btn + .link-btn { margin-left: 8px; }
+
+  /* ── Drink grid ── */
+  .drink-category {
+    margin-bottom: 20px;
+  }
+  .drink-cat-label {
+    font-size: 9px;
+    color: var(--cyan-dim);
+    letter-spacing: 0.15em;
+    border-bottom: 0.5px solid var(--border);
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+  }
+  .drink-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 0.5px solid #0e1e1b;
+  }
+  .drink-item:last-child { border-bottom: none; }
+  .drink-name { font-size: 12px; color: var(--white); }
+  .drink-desc { font-size: 10px; color: var(--gray-light); margin-top: 2px; }
+  .drink-price { font-size: 12px; color: var(--cyan-dim); flex-shrink: 0; margin-left: 12px; }
+
+  /* ── Goods ── */
+  .goods-img-placeholder {
+    width: 100%;
+    height: 120px;
+    background: var(--bg3);
+    border: 0.5px dashed var(--border);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    color: var(--gray);
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+  }
+  .goods-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .goods-card {
+    flex: 1;
+    background: var(--bg3);
+    border: 0.5px solid var(--border);
+    border-radius: 4px;
+    padding: 12px;
+  }
+  .goods-img {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #0a1a17;
+    border: 0.5px dashed var(--border);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    color: var(--gray);
+    margin-bottom: 8px;
+    letter-spacing: 0.08em;
+  }
+  .goods-name { font-size: 11px; color: var(--white); }
+  .goods-sub { font-size: 9px; color: var(--gray-light); margin-top: 3px; }
+
+  /* ── Notice ── */
+  .notice-item {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 0.5px solid var(--border);
+    align-items: flex-start;
+  }
+  .notice-item:last-child { border-bottom: none; }
+  .notice-num {
+    font-size: 9px;
+    color: var(--cyan-dim);
+    flex-shrink: 0;
+    margin-top: 2px;
+    letter-spacing: 0.05em;
+  }
+  .notice-text { font-size: 11px; color: var(--gray-light); line-height: 1.7; }
+  .notice-text strong { color: var(--white); }
+  .notice-warn { color: #e87060; }
+
+  .wristband-box {
+    background: var(--bg3);
+    border: 0.5px solid var(--cyan-dim);
+    border-radius: 4px;
+    padding: 14px 16px;
+    margin-top: 14px;
+  }
+  .wristband-title {
+    font-size: 9px;
+    color: var(--cyan);
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+  }
+  .wb-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+    align-items: flex-start;
+  }
+  .wb-tag {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    font-weight: 700;
+  }
+  .wb-tag.day1 { background: #003d35; color: var(--cyan); }
+  .wb-tag.day2 { background: #1a1a2e; color: #7b7bff; }
+  .wb-tag.vip  { background: #2e1a00; color: #ffb84d; }
+  .wb-desc { font-size: 10px; color: var(--gray-light); line-height: 1.6; }
+
+  /* ── Access ── */
+  .access-main {
+    font-family: 'DM Serif Display', serif;
+    font-size: 16px;
+    color: #fff;
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+  .access-main span { color: var(--cyan); }
+  .step-list { list-style: none; margin-bottom: 16px; }
+  .step-item {
+    display: flex;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 0.5px solid var(--border);
+    align-items: flex-start;
+  }
+  .step-dot {
+    width: 18px; height: 18px;
+    border: 0.5px solid var(--cyan-dim);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; color: var(--cyan);
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .step-text { font-size: 11px; color: var(--gray-light); line-height: 1.7; }
+  .step-text strong { color: var(--white); }
+
+  .map-placeholder {
+    width: 100%;
+    height: 100px;
+    background: var(--bg3);
+    border: 0.5px dashed var(--border);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: var(--gray);
+    letter-spacing: 0.1em;
+    margin-top: 14px;
+  }
+
+  /* ── Footer ── */
+  footer {
+    margin-top: 30px;
+    border-top: 0.5px solid var(--border);
+    padding: 16px 20px 32px;
+    text-align: center;
+  }
+  footer .f-handle { font-size: 12px; color: var(--cyan); margin-bottom: 4px; }
+  footer .f-email { font-size: 10px; color: var(--gray); }
+  footer .f-copy { font-size: 8px; color: var(--gray); margin-top: 12px; letter-spacing: 0.05em; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="header-tag">QR INFO PAGE · MEDUSYNC 2026</div>
+  <div class="header-title">MEDU<br>SYNC</div>
+  <div class="header-sub">+ THE UNDERGROUND DJ PARTY +</div>
+  <div class="header-date">2026. 7. 11 – 12 · 바이널 언더그라운드, 부산</div>
+  <div class="header-corner">
+    START 19:00<br>
+    만 19세 이상
+  </div>
+</header>
+
+<!-- ── Nav ── -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="show('ticket')">TICKET</button>
+  <button class="nav-btn" onclick="show('bar')">BAR</button>
+  <button class="nav-btn" onclick="show('goods')">GOODS</button>
+  <button class="nav-btn" onclick="show('notice')">안내사항</button>
+  <button class="nav-btn" onclick="show('access')">오는 길</button>
+</nav>
+
+<!-- ════════════════════════════════
+     TICKET
+════════════════════════════════ -->
+<section class="section active" id="ticket">
+  <div class="sec-label">01 / TICKET</div>
+  <div class="sec-title">티켓 구매</div>
+
+  <!-- 온라인 -->
+  <div class="method-block">
+    <div class="method-head">ONLINE</div>
+    <div class="method-body">
+      <strong>Festa</strong> 또는 <strong>인터파크</strong> 에서 구매 가능<br>
+      결제 후 QR 티켓이 이메일 및 앱으로 발송<br>
+      입장 시 QR 스캔으로 확인
+    </div>
+    <a class="link-btn" href="#">Festa 예매하기 →</a>
+    <a class="link-btn" href="#">인터파크 예매하기 →</a>
+  </div>
+
+  <!-- 오프라인 -->
+  <div class="method-block">
+    <div class="method-head">OFFLINE · 현장 구매</div>
+    <div class="method-body">
+      당일 <strong>입구 부스</strong>에서 현금/카드 결제 가능<br>
+      현장 구매는 얼리버드 혜택 미적용<br>
+      <strong>신분증을 반드시 지참</strong>하세요
+    </div>
+  </div>
+
+  <!-- 오프라인 파트너샵 -->
+  <div class="method-block">
+    <div class="method-head">OFFLINE · 파트너 레코드샵</div>
+    <div class="method-body">
+      부산 서면 / 남포동 파트너 레코드샵 오프라인 판매<br>
+      자세한 위치는 인스타그램에서 확인
+    </div>
+    <a class="link-btn" href="#">@we_are_UD_DJ →</a>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 가격표 -->
+  <div class="card-label">PRICE</div>
+  <div class="card ticket-highlight">
+    <div class="card-label">EARLY BIRD <span class="badge">~7.1</span></div>
+    <div class="ticket-row">
+      <div>
+        <div class="ticket-name">얼리버드</div>
+        <div class="ticket-note">굿즈 스티커팩 증정 · 수량 한정</div>
+      </div>
+      <div class="ticket-price">₩13,000</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">PRE-SALE <span style="font-size:8px;color:var(--gray-light);">~7.10</span></div>
+    <div class="ticket-row">
+      <div>
+        <div class="ticket-name">사전예매 1일권</div>
+        <div class="ticket-note">선택한 날 1일 입장</div>
+      </div>
+      <div class="ticket-price">₩17,000</div>
+    </div>
+    <div class="ticket-row">
+      <div>
+        <div class="ticket-name">사전예매 2일권</div>
+        <div class="ticket-note">7.11 + 7.12 양일 입장 · 음료 1잔 제공</div>
+      </div>
+      <div class="ticket-price">₩30,000</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">DOOR</div>
+    <div class="ticket-row">
+      <div>
+        <div class="ticket-name">현장 1일권</div>
+      </div>
+      <div class="ticket-price">₩20,000</div>
+    </div>
+    <div class="ticket-row">
+      <div>
+        <div class="ticket-name">현장 2일권</div>
+      </div>
+      <div class="ticket-price">₩35,000</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="method-body" style="font-size:10px; color:var(--gray-light);">
+    환불 : 행사 3일 전까지 100% · 2일 전 50% · 1일 전 불가<br>
+    문의 : herewego@gmail.com
+  </div>
+</section>
+
+<!-- ════════════════════════════════
+     BAR
+════════════════════════════════ -->
+<section class="section" id="bar">
+  <div class="sec-label">02 / BAR</div>
+  <div class="sec-title">바 메뉴</div>
+
+  <!-- 칵테일 -->
+  <div class="drink-category">
+    <div class="drink-cat-label">SIGNATURE COCKTAIL</div>
+    <div class="drink-item">
+      <div>
+        <div class="drink-name">Bathypelagic</div>
+        <div class="drink-desc">진 · 블루 큐라소 · 라임 · 소다 — 청명한 심해 한 잔</div>
+      </div>
+      <div class="drink-price">₩12,000</div>
+    </div>
+    <div class="drink-item">
+      <div>
+        <div class="drink-name">Dark Pulse</div>
+        <div class="drink-desc">메스칼 · 활성탄 · 자몽 · 로즈메리 시럽</div>
+      </div>
+      <div class="drink-price">₩13,000</div>
+    </div>
+    <div class="drink-item">
+      <div>
+        <div class="drink-name">Lucent Sting</div>
+        <div class="drink-desc">보드카 · 유자 · 자스민 티 · 통카빈 비터스</div>
+      </div>
+      <div class="drink-price">₩12,000</div>
+    </div>
+    <div class="drink-item">
+      <div>
+        <div class="drink-name">Abyssal Current</div>
+        <div class="drink-desc">럼 · 그린 샤르트뢰즈 · 냉침 셀러리 주스 · 소금</div>
+      </div>
+      <div class="drink-price">₩13,000</div>
+    </div>
+  </div>
+
+  <!-- 맥주 / 스피릿 -->
+  <div class="drink-category">
+    <div class="drink-cat-label">BEER &amp; SPIRITS</div>
+    <div class="drink-item">
+      <div>
+        <div class="drink-name">크래프트 생맥주</div>
+        <div class="drink-desc">국내 크래프트 브루어리 로테이션 탭</div>
+      </div>
+      <div class="drink-price">₩7,000</div>
+    </div>
+    <div class="drink-item">
+      <div>
+        <div class="drink-name">병맥주</div>
+        <div class="drink-desc">Heineken / Asahi / Cass</div>
+      </div>
+      <div class="drink-price">₩6,000</div>
+    </div>
+    <div class="drink-item">
+      <div>
+        <div class="drink-name">위스키 샷</div>
+        <div class="drink-desc">Jameson / Maker's Mark</div>
+      </div>
+      <div class="drink-price">₩8,000</div>
+    </div>
+    <div class="drink-item">
+      <div>
+        <div class="drink-name">보드카 샷</div>
+        <div class="drink-desc">Absolut / Belvedere</div>
+      </div>
+      <div class="drink-price">₩8,000</div>
+    </div>
+  </div>
+
+  <!-- 논알콜 -->
+  <div class="drink-category">
+    <div class="drink-cat-label">NON-ALCOHOLIC</div>
+    <div class="drink-item">
+      <div>
+        <div class="drink-name">Depth Zero</div>
+        <div class="drink-desc">콜드브루 얼그레이 · 라임 · 코코넛 워터 — 시그니처 논알콜</div>
+      </div>
+      <div class="drink-price">₩8,000</div>
+    </div>
+    <div class="drink-item">
+      <div>
+        <div class="drink-name">Medusa Mule</div>
+        <div class="drink-desc">진저비어 · 유자청 · 민트 · 소다 — 논알콜 목테일</div>
+      </div>
+      <div class="drink-price">₩8,000</div>
+    </div>
+    <div class="drink-item">
+      <div>
+        <div class="drink-name">Biolume</div>
+        <div class="drink-desc">나비완두꽃차 · 레몬 · 스파클링 — 색 변하는 블루 드링크</div>
+      </div>
+      <div class="drink-price">₩7,000</div>
+    </div>
+    <div class="drink-item">
+      <div>
+        <div class="drink-name">스파클링 워터</div>
+        <div class="drink-desc">San Pellegrino</div>
+      </div>
+      <div class="drink-price">₩4,000</div>
+    </div>
+    <div class="drink-item">
+      <div>
+        <div class="drink-name">생수</div>
+        <div class="drink-desc">워터 스테이션은 무료 제공</div>
+      </div>
+      <div class="drink-price">FREE</div>
+    </div>
+  </div>
+
+  <div style="font-size:9px; color:var(--gray); margin-top:4px;">
+    ※ 음료는 행사 당일 구성이 일부 변경될 수 있습니다
+  </div>
+</section>
+
+<!-- ════════════════════════════════
+     GOODS
+════════════════════════════════ -->
+<section class="section" id="goods">
+  <div class="sec-label">03 / GOODS</div>
+  <div class="sec-title">얼리버드 굿즈</div>
+
+  <div class="card" style="border-color: var(--cyan-dim); background: var(--bg3);">
+    <div class="card-label">EARLY BIRD 한정 — 7.1까지 예매 시 증정</div>
+    <div style="font-size: 11px; color: var(--gray-light); margin-bottom: 14px; line-height: 1.8;">
+      얼리버드 티켓 구매자 전원에게 입장 시<br>
+      <strong style="color: var(--white);">MEDUSYNC 스티커팩</strong>을 증정합니다.
+    </div>
+
+    <div class="goods-row">
+      <div class="goods-card">
+        <div class="goods-img">STICKER A<br>포스터 해파리</div>
+        <div class="goods-name">해파리 와이어</div>
+        <div class="goods-sub">포스터 메인 오브젝트<br>투명 배경 다이컷</div>
+      </div>
+      <div class="goods-card">
+        <div class="goods-img">STICKER B<br>MEDUSYNC 로고</div>
+        <div class="goods-name">MEDUSYNC 로고</div>
+        <div class="goods-sub">세리프 레터링<br>블랙 홀로그램 재질</div>
+      </div>
+    </div>
+
+    <div class="goods-row">
+      <div class="goods-card">
+        <div class="goods-img">STICKER C<br>방전 이펙트</div>
+        <div class="goods-name">번개 / 방전</div>
+        <div class="goods-sub">시안 형광 컬러<br>야광 소재</div>
+      </div>
+      <div class="goods-card">
+        <div class="goods-img">STICKER D<br>날짜 텍스트</div>
+        <div class="goods-name">7.11 – 7.12</div>
+        <div class="goods-sub">날짜 + 장르 키워드<br>모노스페이스 타입</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="card-label" style="margin-bottom:8px;">현장 판매 굿즈</div>
+  <div class="drink-item">
+    <div>
+      <div class="drink-name">MEDUSYNC 토트백</div>
+      <div class="drink-desc">블랙 캔버스 · 실크스크린 프린트</div>
+    </div>
+    <div class="drink-price">₩18,000</div>
+  </div>
+  <div class="drink-item">
+    <div>
+      <div class="drink-name">리소그래프 엽서 세트</div>
+      <div class="drink-desc">포스터 비주얼 A6 엽서 3종</div>
+    </div>
+    <div class="drink-price">₩5,000</div>
+  </div>
+  <div class="drink-item">
+    <div>
+      <div class="drink-name">이어플러그</div>
+      <div class="drink-desc">MEDUSYNC 로고 케이스 포함</div>
+    </div>
+    <div class="drink-price">FREE</div>
+  </div>
+  <div style="font-size:9px; color:var(--gray); margin-top:12px;">
+    ※ 현장 굿즈는 수량 한정 · 소진 시 조기 종료<br>
+    ※ 굿즈 사진은 인스타그램에서 확인 가능
+  </div>
+  <a class="link-btn" href="#" style="margin-top:12px; display:inline-block;">굿즈 미리보기 @we_are_UD_DJ →</a>
+</section>
+
+<!-- ════════════════════════════════
+     NOTICE
+════════════════════════════════ -->
+<section class="section" id="notice">
+  <div class="sec-label">04 / NOTICE</div>
+  <div class="sec-title">안내사항</div>
+
+  <!-- 입장 -->
+  <div class="card-label" style="margin-bottom:8px;">입장 확인</div>
+  <div class="wristband-box">
+    <div class="wristband-title">TICKET &amp; WRISTBAND</div>
+    <div class="wb-row">
+      <div class="wb-tag day1">7.11</div>
+      <div class="wb-desc">시안 형광 팔찌 — 7.11 입장자 전원 착용<br>팔찌를 제거하거나 훼손 시 재입장 불가</div>
+    </div>
+    <div class="wb-row">
+      <div class="wb-tag day2">7.12</div>
+      <div class="wb-desc">바이올렛 팔찌 — 7.12 입장자 전원 착용</div>
+    </div>
+    <div class="wb-row">
+      <div class="wb-tag vip">2DAY</div>
+      <div class="wb-desc">골드 팔찌 — 양일권 구매자 / 재입장 무제한</div>
+    </div>
+    <div style="font-size:9px; color:var(--gray-light); margin-top:10px; line-height:1.8;">
+      · QR 티켓 스캔 후 팔찌 즉시 착용<br>
+      · 팔찌 미착용 시 내부에서 퇴장 요청될 수 있음<br>
+      · 재입장은 팔찌 확인 후 가능 · 신분증 지참 유지
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 기본 수칙 -->
+  <div class="card-label" style="margin-bottom:8px;">기본 수칙</div>
+  <div class="notice-item">
+    <div class="notice-num">01</div>
+    <div class="notice-text"><strong>만 19세 이상</strong> 입장 가능. 신분증(주민등록증·여권·운전면허증) 필수 지참</div>
+  </div>
+  <div class="notice-item">
+    <div class="notice-num">02</div>
+    <div class="notice-text"><strong>드레스코드</strong> : 다크 톤 / 올블랙 권장. 형광·원색 계열 지양</div>
+  </div>
+  <div class="notice-item">
+    <div class="notice-num">03</div>
+    <div class="notice-text">주최 측 판단에 따라 <strong>입장 거부</strong>될 수 있음 (취객, 드레스코드 미준수 등)</div>
+  </div>
+  <div class="notice-item">
+    <div class="notice-num">04</div>
+    <div class="notice-text">짐 보관은 <strong>코인 로커</strong> 이용 (100원 반환형)</div>
+  </div>
+  <div class="notice-item">
+    <div class="notice-num">05</div>
+    <div class="notice-text">이어플러그는 입구에서 <strong>무료 배포</strong> — 장시간 청각 보호를 위해 착용 권장</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 안전 -->
+  <div class="card-label" style="margin-bottom:8px;">안전 안내</div>
+  <div class="notice-item">
+    <div class="notice-num notice-warn">⚠</div>
+    <div class="notice-text"><strong>불법 약물 소지·사용 즉시 퇴장 및 신고.</strong> 예외 없음</div>
+  </div>
+  <div class="notice-item">
+    <div class="notice-num notice-warn">⚠</div>
+    <div class="notice-text"><strong>타인에 대한 위협적 행동·성희롱</strong> 발생 시 즉각 퇴장 조치</div>
+  </div>
+  <div class="notice-item">
+    <div class="notice-num">06</div>
+    <div class="notice-text">음주 후 귀가 시 <strong>대중교통·대리운전</strong> 이용 권장. 음주운전 금지</div>
+  </div>
+  <div class="notice-item">
+    <div class="notice-num">07</div>
+    <div class="notice-text">신체 이상 시 스태프에게 즉시 알릴 것. <strong>스태프는 시안 형광 조끼</strong> 착용</div>
+  </div>
+  <div class="notice-item">
+    <div class="notice-num">08</div>
+    <div class="notice-text">지하 공간 특성상 <strong>비상구 위치를 미리 확인</strong>해두세요</div>
+  </div>
+  <div class="notice-item">
+    <div class="notice-num">09</div>
+    <div class="notice-text">플로어 내 <strong>사진·영상 촬영</strong>은 스태프 허가 구역에서만 가능</div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════
+     ACCESS
+════════════════════════════════ -->
+<section class="section" id="access">
+  <div class="sec-label">05 / ACCESS</div>
+  <div class="sec-title">오는 길</div>
+
+  <div class="access-main">
+    부산 지하철 <span>2호선</span><br>
+    경성대·부경대역 <span>3번 출구</span>
+  </div>
+
+  <ul class="step-list">
+    <li class="step-item">
+      <div class="step-dot">1</div>
+      <div class="step-text"><strong>3번 출구</strong>로 나와 수영로 방향으로 직진</div>
+    </li>
+    <li class="step-item">
+      <div class="step-dot">2</div>
+      <div class="step-text">큰길(수영로)에서 <strong>오른쪽</strong>으로 꺾어 약 1분</div>
+    </li>
+    <li class="step-item">
+      <div class="step-dot">3</div>
+      <div class="step-text"><strong>수영로 322번길</strong> 골목으로 진입</div>
+    </li>
+    <li class="step-item">
+      <div class="step-dot">4</div>
+      <div class="step-text"><strong>한라빌딩</strong>을 찾아 <strong>지하 1층</strong>으로 내려오면 입구</div>
+    </li>
+  </ul>
+
+  <div class="card" style="margin-bottom:10px;">
+    <div class="card-label">도보 거리</div>
+    <div style="font-size: 20px; color: var(--cyan); font-weight: 700; margin: 4px 0;">약 5분</div>
+    <div style="font-size: 10px; color: var(--gray-light);">경성대·부경대역 3번 출구 기준</div>
+  </div>
+
+  <div class="method-block">
+    <div class="method-head">버스 이용 시</div>
+    <div class="method-body">
+      수영로 방면 버스 이용 후 <strong>대연사거리</strong> 정류장 하차<br>
+      하차 후 수영로 322번길 방향 도보 3분
+    </div>
+  </div>
+
+  <div class="method-block">
+    <div class="method-head">주차 안내</div>
+    <div class="method-body">
+      건물 내 <strong>주차 불가</strong><br>
+      인근 공영주차장 이용 — 음주 후 귀가 시 대중교통 이용 권장
+    </div>
+  </div>
+
+  <div class="map-placeholder">지도 이미지 삽입 영역 · 일러스트 약도</div>
+
+  <a class="link-btn" href="https://map.kakao.com" style="margin-top:14px; display:inline-block;">카카오맵으로 보기 →</a>
+  <a class="link-btn" href="https://naver.me" style="margin-top:14px; display:inline-block;">네이버 지도 →</a>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="f-handle">@we_are_UD_DJ</div>
+  <div class="f-email">herewego@gmail.com</div>
+  <div class="f-copy">MEDUSYNC 2026 · UD_DJ COLLECTIVE · VINYL UNDERGROUND, BUSAN</div>
+</footer>
+
+<script>
+  function show(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.target.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>
